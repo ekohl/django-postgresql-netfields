@@ -1,44 +1,55 @@
 from django.db.models import Model
 
-from netfields import InetAddressField, CidrAddressField, MACAddressField, \
-        NetManager
+from netfields import NetManager
+from netfields.fields import IPy, ipaddr
 
 
-class InetTestModel(Model):
-    field = InetAddressField()
+class BaseTestModel(Model):
     objects = NetManager()
 
     class Meta:
-        db_table = 'inet'
+        abstract = True
 
 
-class NullInetTestModel(Model):
-    field = InetAddressField(null=True)
-    objects = NetManager()
+# IPy models
 
-    class Meta:
-        db_table = 'nullinet'
+class IPyInetTestModel(BaseTestModel):
+    field = IPy.InetAddressField()
 
 
-class CidrTestModel(Model):
-    field = CidrAddressField()
-    objects = NetManager()
-
-    class Meta:
-        db_table = 'cidr'
+class IPyNullInetTestModel(BaseTestModel):
+    field = IPy.InetAddressField(null=True)
 
 
-class NullCidrTestModel(Model):
-    field = CidrAddressField(null=True)
-    objects = NetManager()
-
-    class Meta:
-        db_table = 'nullcidr'
+class IPyCidrTestModel(BaseTestModel):
+    field = IPy.CidrAddressField()
 
 
-class MACTestModel(Model):
-    mac = MACAddressField(null=True)
-    objects = NetManager()
+class IPyNullCidrTestModel(BaseTestModel):
+    field = IPy.CidrAddressField(null=True)
 
-    class Meta:
-        db_table = 'mac'
+
+class IPyMACTestModel(BaseTestModel):
+    mac = IPy.MACAddressField(null=True)
+
+
+# ipaddr models
+
+class IpaddrInetTestModel(BaseTestModel):
+    field = ipaddr.InetAddressField()
+
+
+class IpaddrNullInetTestModel(BaseTestModel):
+    field = ipaddr.InetAddressField(null=True)
+
+
+class IpaddrCidrTestModel(BaseTestModel):
+    field = ipaddr.CidrAddressField()
+
+
+class IpaddrNullCidrTestModel(BaseTestModel):
+    field = ipaddr.CidrAddressField(null=True)
+
+
+class IpaddrMACTestModel(BaseTestModel):
+    mac = ipaddr.MACAddressField(null=True)

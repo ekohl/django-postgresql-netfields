@@ -1,5 +1,4 @@
 import re
-from IPy import IP
 
 from django import forms
 from django.utils.encoding import force_unicode
@@ -24,18 +23,6 @@ class NetAddressFormField(forms.Field):
     default_error_messages = {
         'invalid': u'Enter a valid IP Address.',
     }
-
-    def __init__(self, *args, **kwargs):
-        super(NetAddressFormField, self).__init__(*args, **kwargs)
-
-    def to_python(self, value):
-        if not value:
-            return None
-
-        if isinstance(value, IP):
-            return value
-
-        return self.python_type(value)
 
 
 MAC_RE = re.compile(r'^(([A-F0-9]{2}:){5}[A-F0-9]{2})$')

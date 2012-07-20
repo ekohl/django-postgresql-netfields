@@ -1,23 +1,21 @@
-from IPy import IP
-
 from django.db import models
 
 from netfields.managers import NET_OPERATORS, NET_TEXT_OPERATORS
-from netfields.forms import NetAddressFormField, MACAddressFormField
 
 
-class _NetAddressField(models.Field):
-    empty_strings_allowed = False
-
+class _BaseNetField(object):
     def __init__(self, *args, **kwargs):
         kwargs['max_length'] = self.max_length
-        super(_NetAddressField, self).__init__(*args, **kwargs)
+        super(_BaseNetField, self).__init__(*args, **kwargs)
 
-    def to_python(self, value):
-        if not value:
-            return value
+    def formfield(self, **kwargs):
+        defaults = {'form_class': self.form_class}
+        defaults.update(kwargs)
+        return super(_BaseNetField, self).formfield(**defaults)
 
-        return IP(value)
+
+class _NetAddressField(_BaseNetField, models.Field):
+    empty_strings_allowed = False
 
     def get_prep_lookup(self, lookup_type, value):
         if not value:
@@ -37,7 +35,7 @@ class _NetAddressField(models.Field):
         return unicode(self.to_python(value))
 
     def get_db_prep_lookup(self, lookup_type, value, connection,
-            prepared=False):
+                           prepared=False):
         if not value:
             return []
 
@@ -47,11 +45,6 @@ class _NetAddressField(models.Field):
 
         return super(_NetAddressField, self).get_db_prep_lookup(
             lookup_type, value, connection=connection, prepared=prepared)
-
-    def formfield(self, **kwargs):
-        defaults = {'form_class': NetAddressFormField}
-        defaults.update(kwargs)
-        return super(_NetAddressField, self).formfield(**defaults)
 
 
 class InetAddressField(_NetAddressField):
@@ -72,17 +65,9 @@ class CidrAddressField(_NetAddressField):
         return 'cidr'
 
 
-class MACAddressField(models.Field):
+class MACAddressField(_BaseNetField, models.Field):
     description = "PostgreSQL MACADDR field"
-
-    def __init__(self, *args, **kwargs):
-        kwargs['max_length'] = 17
-        super(MACAddressField, self).__init__(*args, **kwargs)
+    max_length = 17
 
     def db_type(self, connection):
         return 'macaddr'
-
-    def formfield(self, **kwargs):
-        defaults = {'form_class': MACAddressFormField}
-        defaults.update(kwargs)
-        return super(MACAddressField, self).formfield(**defaults)

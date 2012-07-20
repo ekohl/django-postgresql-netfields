@@ -1,17 +1,17 @@
-from IPy import IP
-
 from django.db import IntegrityError
 from django.test import TestCase
 
-from netfields.models import (CidrTestModel, InetTestModel, NullCidrTestModel,
-                              NullInetTestModel)
+from netfields import models
 
 
 class BaseTestCase(object):
     select = 'SELECT "table"."id", "table"."field" FROM "table" '
 
+    def setUp(self):
+        self.qs = self.model.objects.all()
+
     def assertSqlEquals(self, qs, sql):
-        sql = sql.replace('"table"', '"%s"' % self.table)
+        sql = sql.replace('"table"', '"%s"' % self.model._meta.db_table)
         self.assertEqual(qs.query.get_compiler(qs.db).as_sql()[0], sql)
 
     def assertSqlRaises(self, qs, error):
@@ -22,12 +22,6 @@ class BaseTestCase(object):
 
     def test_init_with_text_fails(self):
         self.assertRaises(ValueError, self.model, field='abc')
-
-    def test_save(self):
-        self.model(field='10.0.0.1').save()
-
-    def test_save_object(self):
-        self.model(field=IP('10.0.0.1')).save()
 
     def test_equals_lookup(self):
         self.assertSqlEquals(self.qs.filter(field='10.0.0.1'),
@@ -103,6 +97,14 @@ class BaseTestCase(object):
 
 
 class BaseInetFieldTestCase(BaseTestCase):
+    def test_save(self):
+        for addr in ('10.0.0.1', '::1'):
+            self.model(field=addr).save()
+
+    #def test_save_object(self):
+    #    for addr in ('10.0.0.1', '::1'):
+    #        self.model(field=ADDRESS(addr)).save()
+
     def test_startswith_lookup(self):
         self.assertSqlEquals(self.qs.filter(field__startswith='10.'),
             self.select + 'WHERE HOST("table"."field") ILIKE %s ')
@@ -129,6 +131,14 @@ class BaseInetFieldTestCase(BaseTestCase):
 
 
 class BaseCidrFieldTestCase(BaseTestCase):
+    def test_save(self):
+        for addr in ('10.0.0.0', '10.0.0.0/24', '::1', '::1/128'):
+            self.model(field=addr).save()
+
+    #def test_save_object(self):
+    #    for addr in ('10.0.0.0', '10.0.0.0/24', '::1', '::1/128'):
+    #        self.model(field=NETWORK(addr)).save()
+
     def test_startswith_lookup(self):
         self.assertSqlEquals(self.qs.filter(field__startswith='10.'),
             self.select + 'WHERE TEXT("table"."field") ILIKE %s ')
@@ -154,12 +164,7 @@ class BaseCidrFieldTestCase(BaseTestCase):
             self.select + 'WHERE TEXT("table"."field") ~* %s ')
 
 
-class TestInetField(BaseInetFieldTestCase, TestCase):
-    def setUp(self):
-        self.model = InetTestModel
-        self.qs = self.model.objects.all()
-        self.table = 'inet'
-
+class TestInetField(BaseInetFieldTestCase):
     def test_save_blank_fails(self):
         self.assertRaises(IntegrityError, self.model(field='').save)
 
@@ -170,12 +175,7 @@ class TestInetField(BaseInetFieldTestCase, TestCase):
         self.assertRaises(IntegrityError, self.model().save)
 
 
-class TestInetFieldNullable(BaseInetFieldTestCase, TestCase):
-    def setUp(self):
-        self.model = NullInetTestModel
-        self.qs = self.model.objects.all()
-        self.table = 'nullinet'
-
+class TestInetFieldNullable(BaseInetFieldTestCase):
     def test_save_blank(self):
         self.model().save()
 
@@ -186,12 +186,7 @@ class TestInetFieldNullable(BaseInetFieldTestCase, TestCase):
         self.model().save()
 
 
-class TestCidrField(BaseCidrFieldTestCase, TestCase):
-    def setUp(self):
-        self.model = CidrTestModel
-        self.qs = self.model.objects.all()
-        self.table = 'cidr'
-
+class TestCidrField(BaseCidrFieldTestCase):
     def test_save_blank_fails(self):
         self.assertRaises(IntegrityError, self.model(field='').save)
 
@@ -202,12 +197,7 @@ class TestCidrField(BaseCidrFieldTestCase, TestCase):
         self.assertRaises(IntegrityError, self.model().save)
 
 
-class TestCidrFieldNullable(BaseCidrFieldTestCase, TestCase):
-    def setUp(self):
-        self.model = NullCidrTestModel
-        self.qs = self.model.objects.all()
-        self.table = 'nullcidr'
-
+class TestCidrFieldNullable(BaseCidrFieldTestCase):
     def test_save_blank(self):
         self.model().save()
 
@@ -216,3 +206,39 @@ class TestCidrFieldNullable(BaseCidrFieldTestCase, TestCase):
 
     def test_save_nothing_fails(self):
         self.model().save()
+
+
+# IPy tests
+
+class TestIPyInetField(TestInetField, TestCase):
+    model = models.IPyInetTestModel
+
+
+class TestIPyInetFieldNullable(TestInetFieldNullable, TestCase):
+    model = models.IPyNullInetTestModel
+
+
+class TestIPyCidrField(TestCidrField, TestCase):
+    model = models.IPyCidrTestModel
+
+
+class TestIPyCidrFieldNullable(TestCidrFieldNullable, TestCase):
+    model = models.IPyNullCidrTestModel
+
+
+# ipaddr tests
+
+class TestIpaddrInetField(TestInetField, TestCase):
+    model = models.IpaddrInetTestModel
+
+
+class TestIpaddrInetFieldNullable(TestInetFieldNullable, TestCase):
+    model = models.IpaddrNullInetTestModel
+
+
+class TestIpaddrCidrField(TestCidrField, TestCase):
+    model = models.IpaddrCidrTestModel
+
+
+class TestIpaddrCidrFieldNullable(TestCidrFieldNullable, TestCase):
+    model = models.IpaddrNullCidrTestModel
