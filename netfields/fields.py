@@ -10,8 +10,15 @@ class _BaseField(models.Field):
         kwargs['max_length'] = self.max_length
         super(_BaseField, self).__init__(*args, **kwargs)
 
+    def get_internal_type(self):
+        return "CharField"
+
     def db_type(self, connection):
-        return self.db_pg_type
+        engine = connection.settings_dict['ENGINE']
+        if engine == 'django.db.backends.postgresql_psycopg2':
+            return self.db_pg_type
+
+        return super(_BaseField, self).db_type(connection)
 
     def formfield(self, **kwargs):
         defaults = {'form_class': self.form_class}
